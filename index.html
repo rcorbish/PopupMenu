@@ -1,0 +1,45 @@
+<html>
+<head>
+<script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+<script src="PopoutMenu.js"></script>
+</head>
+
+<body>
+
+<script type="text/javascript" >
+/*
+	This is called whenever a new selection is clicked
+*/	
+	function cbf( item, oldItem ) {
+		//alert( (oldItem?(oldItem.label+" -> "):"") + item.label ) ;
+	}
+	
+/*
+	When the page is loaded and ready to go we call this to draw the PopoutMenu
+*/	
+	$(document).ready(function(){
+	// Create a menu with a wrench icon in the middle
+		menu = new PopoutMenu( { id: "theMenu", itemSize: 25, callback: cbf, icon: 'icons/wrench78.svg#Capa_1' } ) ;
+	// add some sample menu items with icons in them
+		for( var i=4 ; i<8 ; i++ ) {
+			menu.addItem( { color: 'silver', icon: 'icons/agenda'+i+'.svg#Capa_1' } ) ;
+		}
+		for( var i=1 ; i<4 ; i++ ) {
+			menu.addItem( { color: 'antiquewhite', icon: 'icons/briefcase7'+i+'.svg#Capa_1' } ) ;
+		}
+	// Must call this after all items are added - it creates the svg elements inside the div
+		menu.initialize() ; 
+	})
+
+</script>
+
+
+<!-- The sample popout menu will be draw here - place it where you like -->
+<div id="theMenu"></div>
+
+<!-- The licence for the icons -->
+<span style='font-size:7pt'>icons "designed by Freepik"</span>
+<br/>
+Download: git clone https://github.com/rcorbish/PopupMenu.git
+</body>
+</html>
