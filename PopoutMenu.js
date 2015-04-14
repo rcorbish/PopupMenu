@@ -12,14 +12,16 @@
 	color		background color of the menu items
 	startOClock	the clock number at which to start drawing the menu
 	endOClock	the clock number at which to draw the last menu item
-	callback	function( newItem, oldItem) called whenever the menu selection changes
+	callback	function( newItem, oldItem) called whenever the menu selection changes. No default
+	popoutMenu	a boolean - false means the menu is always open, true - the menu expands/collapses when clicked. Default true
+	radioMenu	a boolean - true sets the menu to change the centre icon to the selected item. Default true
 	
 	Menu items are drawn clockwise.
 	Individual menuItems size, color, etc. can be overridden (see addItem)
 	
 	example usage. A 3/4 circle of 6 menuItems, the centre circle is pink the outer circles are larger grey circles
 	
-	menu = new PopoutMenu( { id: "theMenu", endOClock: 9, itemSize: 20, callback: cbf } ) ;
+	menu = new PopoutMenu( { id: "theMenu", endOClock: 9, itemSize: 20 } ) ;
 	for( var i=0 ; i<6 ; i++ ) {
 		menu.addItem( { color: 'silver', size:20 } ) ;
 	}
@@ -48,6 +50,8 @@ function PopoutMenu( args ) {
 	if( !this.color )   	this.color 			= 'pink' ;
 	if( !this.startOClock ) this.startOClock 	= 12 ;
 	if( !this.endOClock ) 	this.endOClock 		= 12 ;
+	if( !this.radioMenu ) 	this.radioMenu		= true ;
+	if( !this.popoutMenu ) 	this.popoutMenu		= true ;
 
 	this.selectedItem = undefined ;
 
@@ -108,39 +112,42 @@ function PopoutMenu( args ) {
 
 			newg = this.SVG('g')
 			    .attr('name', this.id  ) 				// all 'animatable' elements have this name
-			    .attr('display', 'none'  ) 				// by default it's hidden
 			    .attr('transform', 'translate(' + (this.size-this.itemSize/2) + ' ' + (this.size-this.itemSize/2) + ')' ) 
 				.data( item )							// attach the item to the svg
 				.appendTo( svgg ) 
 			  	.click( item, function(evt){
 			  		self.changeSelection( evt.data ) ;	// read the item from event data
 			  		return false ;						// finished processing the event
-				} ) ;				    		
-			
-			animation = this.SVG( "animateTransform" )
-	            .attr( 'type', 'translate' )
-	            .attr( 'from', '' + (this.size-this.itemSize/2) + ' ' + (this.size-this.itemSize/2) )
-	            .attr( 'to', '' + item.cx + ' ' + item.cy )
-	            .attr( 'begin', 'indefinite' )
-	            .attr( 'fill', 'freeze' )
-	            .attr( 'dur', this.openTime + 'ms' ) ;
+				} ) ;				
+				    		
+			if( this.popoutMenu ) {
+			    newg.attr('display', 'none'  ) 			// in popupMode menu items are hidden, until opened
+			    
+				animation = this.SVG( "animateTransform" )
+		            .attr( 'type', 'translate' )
+		            .attr( 'from', '' + (this.size-this.itemSize/2) + ' ' + (this.size-this.itemSize/2) )
+		            .attr( 'to', '' + item.cx + ' ' + item.cy )
+		            .attr( 'begin', 'indefinite' )
+		            .attr( 'fill', 'freeze' )
+		            .attr( 'dur', this.openTime + 'ms' ) ;
+		            
+				animation.data( 'direction', 'open' ) ;		
+		    	animation[0].setAttribute( 'attributeName', 'transform' ) ;
+	            animation.appendTo( newg )
+	             
+				animation = this.SVG( "animateTransform" )
+		            .attr( 'type', 'translate' )
+		            .attr( 'to', '' + (this.size-this.itemSize/2) + ' ' + (this.size-this.itemSize/2) )
+		            .attr( 'from', '' + item.cx + ' ' + item.cy )
+		            .attr( 'begin', 'indefinite' )
+		            .attr( 'fill', 'freeze' )
+		            .attr( 'dur', this.openTime + 'ms' ) 
+		            .attr( 'onend', "hideIcons('" + this.id + "')" ) ; 
 	            
-			animation.data( 'direction', 'open' ) ;		
-	    	animation[0].setAttribute( 'attributeName', 'transform' ) ;
-            animation.appendTo( newg )
-             
-			animation = this.SVG( "animateTransform" )
-	            .attr( 'type', 'translate' )
-	            .attr( 'to', '' + (this.size-this.itemSize/2) + ' ' + (this.size-this.itemSize/2) )
-	            .attr( 'from', '' + item.cx + ' ' + item.cy )
-	            .attr( 'begin', 'indefinite' )
-	            .attr( 'fill', 'freeze' )
-	            .attr( 'dur', this.openTime + 'ms' ) 
-	            .attr( 'onend', "hideIcons('" + this.id + "')" ) ; 
-            
-			animation.data( 'direction', 'close' ) ;		
-	    	animation[0].setAttribute( 'attributeName', 'transform' ) ;
-            animation.appendTo( newg ) 
+				animation.data( 'direction', 'close' ) ;		
+		    	animation[0].setAttribute( 'attributeName', 'transform' ) ;
+	            animation.appendTo( newg ) 
+			}
 			
 			circle = this.SVG('circle')
 				.attr('cx', 0)
@@ -158,56 +165,45 @@ function PopoutMenu( args ) {
 					.appendTo( newg ) ;				    		
 	    		att = this.XLINK( 'href', item.icon ) ;
 	    		use[0].setAttributeNodeNS(att);
-			} else {
-				txt = this.SVG("text")
-				    .append( item.label )
-	  				.attr('x', -item.size/2 )
-				    .attr('y', -item.size/2 )
-					.appendTo( newg ) ;				    		
 			}			
-		}
-		
-		this.SVG('circle')
-			.attr('cx', this.size )
-		    .attr('cy', this.size )
-		    .attr('r', this.itemSize )
-		    .attr('fill', this.color )
-			.appendTo( svgg )
-			.click( this, function(evt) {
+		} // end for each item
+
+// Now add the centre icon/text into the menu
+		this.menuCentre = this.SVG('g')
+		    .attr('transform', 'translate(' + this.size + ' ' + this.size + ')' ) 
+			.appendTo( svgg ) ;
+		if( this.popoutMenu ) { 		 
+    		this.menuCentre.click( this, function(evt) {
    				menu = evt.data ; 
 	  			menu.toggleMenuOpenCloseState() ;
-				} ) ;
+			} ) ;
+		}
+		
+		circle = this.SVG('circle')
+			.attr('cx', 0 )
+		    .attr('cy', 0 )
+		    .attr('r', this.itemSize )
+		    .attr('fill', this.color )
+			.appendTo( this.menuCentre ) ;
 
 		if( 'icon' in this ) {
 			use = this.SVG("use")
   				.attr('width', this.itemSize)
 			    .attr('height', this.itemSize )
-  				.attr('x', this.size-this.itemSize/2)
-			    .attr('y', this.size-this.itemSize/2)
-    			.appendTo( svgg )
-    			.click( this, function(evt) {
-   					menu = evt.data ; 
-	  				menu.toggleMenuOpenCloseState() ;
-				} ) ;
+  				.attr('x', -this.itemSize/2)
+			    .attr('y', -this.itemSize/2)
+    			.appendTo( this.menuCentre ) ;
     			
     		att = this.XLINK( 'href', this.icon ) ;
     		use[0].setAttributeNodeNS(att);
-    			    		
-		} else {
-			this.SVG("text")
-			    .append( "open" )
-  				.attr('x', this.size-this.itemSize/2)
-			    .attr('y', this.size-this.itemSize/2)
-    			.appendTo( svgg )
-    			.click( this, function(evt) {
-   					menu = evt.data ; 
-	  				menu.toggleMenuOpenCloseState() ;
-				} ) ;
 		}		
 	}
 	
 	this.menuIsOpen = false ;
 	
+	/******************************************************************************************
+	This is used to open/close the menu - when clicked
+	*/
     this.toggleMenuOpenCloseState = function() {
     	if( this.menuIsOpen ) {
     		this.closeMenu() ;
@@ -218,19 +214,26 @@ function PopoutMenu( args ) {
     	}
     }
     
+	/******************************************************************************************
+	 Close the menu - this will pop the icons into the centre
+	*/
     this.closeMenu = function() {
      	animations = $("[name='"+this.id+"'] > [begin='indefinite']" ).filter( function() { return $(this).data('direction')=='close'; } )
     	animations.each( function( animation ) {
   			this.beginElement();
 		});
-		
-    	// $("[name='"+this.id+"']").attr("display", "none");
     }
 
+	/******************************************************************************************
+	 After the menu animation (closing) is finished we hide all the icons
+	*/
     this.hideIcons = function() {
 		$("[name='"+this.id+"']").attr("display", "none");
 	}
 
+	/******************************************************************************************
+	 Open the menu - this will pop the icons out from the centre
+	*/
     this.openMenu = function() {
     	$("[name='"+this.id+"']").removeAttr("display") ;
     	
@@ -242,13 +245,12 @@ function PopoutMenu( args ) {
     
 	/******************************************************************************************
 	A publicly called function to add a new menu item. 
-	Usually only the label needs to be set because all other items are defaulted from the (parent) Menu class
+	Usually only the icon needs to be set because all other items are defaulted from the (parent) Menu class
 	
 	args: 
 	size 		radius of the menu circle
 	id			by default this has an internal value that's not too useful
 	color		background color of this menu item
-	label		Name of the text in the menu item
 	icon		reference to external svg [e.g. "defs.svg#icon-1" implemented as ( <use xlink:href="defs.svg#icon-1"></use> )]
 		
 	******************************************************************************************/
@@ -257,12 +259,34 @@ function PopoutMenu( args ) {
 		if( !args.size ) args.size = this.itemSize ;
 		if( !args.id ) args.id = "m" + this.items.length + "_" + this.id ;
 		if( !args.color ) args.color = this.color ;
-		if( !args.label && !args.icon ) args.label = "M " + this.items.length ;
 		
 		this.items.push( new Item( args ) ) ;
 	}
 	
+
+	/******************************************************************************************
+	set the 'selected' menu item. 
+	This will change the menu centre to have the color and icon of the selected item
+	If this is a radioMenu type menu the centre icon will become the selected item
+		
+	args: 
+		item 		The new item to be selected - null clears the selection
+		
+	******************************************************************************************/
+	this.setSelectedItem = function( item ) {
+		this.selectedItem = item ;
+		if( this.radioMenu ) {
+			circle = this.menuCentre.children( 'circle' ) ;
+			
+			circle.attr( 'fill', item ? item.color : this.color ) ;
+			
+			use = this.menuCentre.children( 'use' ) ;
+	   		att = this.XLINK( 'href', item ? item.icon : this.icon ) ;
+	   		use[0].setAttributeNodeNS(att);
+	   	}
+   	}
 	
+
 	
 	/******************************************************************************************
 	Callback whenever the menu selection has changed
@@ -284,7 +308,12 @@ function PopoutMenu( args ) {
 			if( 'callback' in this ) {
 				this.callback( item, this.selectedItem ) ;
 			}
-			this.selectedItem = item ;
+			this.setSelectedItem( item ) ;			
+		} else {
+			this.setSelectedItem( null ) ;
+		}			
+		
+		if( this.popoutMenu ) {
 			self.toggleMenuOpenCloseState() ;
 		}
 	}
