@@ -28,21 +28,17 @@
 	menu.initialize() ; 
 	
 ******************************************************************************************************************/
-
-function hideIcons(id) {
-	$("[name='"+id+"']").attr("display", "none");
-}
-
 function PopoutMenu( args ) {
-	var self = this ;
+	var self = this ;				// needed inside some web callbacks
+	this.menuIsOpen = false ;		// assume menu is in close state at first
 	
-    Object.keys(args).forEach( 
-    	function(i){ 
+    Object.keys(args).forEach( 		// Copy the input object to local vars ( same names ) 
+    	function(i) { 
     		self[i] = args[i] ; 
     	} 
     )
     
-	// Set some defaults is necessary
+	// Set some defaults if not set by the input argument
 	if( !this.id )  		this.id 			= 'ArcMenu' ;
 	if( !this.size )    	this.size 			= 80  ;
 	if( !this.openTime )  	this.openTime		= 100  ;
@@ -53,7 +49,7 @@ function PopoutMenu( args ) {
 	if( !this.radioMenu ) 	this.radioMenu		= true ;
 	if( !this.popoutMenu ) 	this.popoutMenu		= true ;
 
-	this.selectedItem = undefined ;
+	this.selectedItem = undefined ;	// no menu is selected - should this be a parameter/index ?????
 
 	/*
 	We want to draw the circular menu as if they were on a clock face
@@ -62,14 +58,18 @@ function PopoutMenu( args ) {
 	while( this.startOClock >= 12 ) this.startOClock -= 12 ;
 	while( this.endOClock > 12 ) this.endOClock -= 12 ;  // NB can end @12 not 0 !!!!!!
 
-	this.arcLength  = (this.endOClock-this.startOClock) * Math.PI / 6.0; // arc span 12 hours = 360deg = 2.Pi rads	
+	this.arcLength  = (this.endOClock-this.startOClock) * Math.PI / 6.0; // arc span in radians (12:00 - 06:00 = 180deg = PI radians)	
 
 	this.startAngle = this.startOClock * Math.PI / 15.0;	// radians per hour on a clock (360 / 12) = 30 == 2.Pi rads
-	this.startAngle -= Math.PI / 2;	// convert to 12 o'clock = UP not 3:00 as in polar-coords
+	this.startAngle -= Math.PI / 2;	// rotate clock face so 12:00 is UP
 	
-	this.items = [] ;
+	this.items = [] ;					// no items in the list @ init
 	
-	function Item( args ) {
+	/**
+		Define an internal private object type to hold menu items
+	*/
+	function Item( args ) {	
+		// Usual pattern - pass in an object containing all named args
 		var self = this ;
 	    Object.keys(args).forEach( 
 	    	function(i){ 
@@ -79,7 +79,7 @@ function PopoutMenu( args ) {
 	}
 
 	/******************************************************************************************
-	Create elements outside of the default namespace. jQuery doesn't support namespaces
+	If we need to create elements outside of the default namespace. jQuery doesn't support namespaces
 	******************************************************************************************/
 	this.SVG = function(tag){ 
 	// Need to create a new doc, by default the docs are XHTML (lowercase only) compliant
@@ -94,6 +94,8 @@ function PopoutMenu( args ) {
 
 	/******************************************************************************************
 	Call this after adding all items to the menu.
+	It creates all the SVG objects in the named div.
+	The named div should be empty - we'll add in everything needed
 	TODO: consider making addItem smarter to create an item each time and adjust all previously added items
 	******************************************************************************************/
 	this.initialize = function() {
@@ -104,8 +106,7 @@ function PopoutMenu( args ) {
 		svgg = $("#g_"+this.id ) ;
 
 		angle = this.startAngle ;
-		for( item of this.items ) {
-			
+		for( item of this.items ) {		// for each item added by addItem ...			
 			item.cx = (this.size - item.size) * Math.cos( angle ) + this.size ;
 			item.cy = (this.size - item.size) * Math.sin( angle ) + this.size ;
 			angle += this.arcLength / (this.items.length - 1) ;
@@ -120,6 +121,8 @@ function PopoutMenu( args ) {
 			  		return false ;						// finished processing the event
 				} ) ;				
 				    		
+			// if we're doing a popout ( and not an always open menu ...
+			// ... we need to add in the animations
 			if( this.popoutMenu ) {
 			    newg.attr('display', 'none'  ) 			// in popupMode menu items are hidden, until opened
 			    
@@ -148,14 +151,15 @@ function PopoutMenu( args ) {
 		    	animation[0].setAttribute( 'attributeName', 'transform' ) ;
 	            animation.appendTo( newg ) 
 			}
-			
+			// Draw each menu item circle with the proper size and colour
 			circle = this.SVG('circle')
 				.attr('cx', 0)
 			    .attr('cy', 0)
 			    .attr('r', item.size)
 			    .attr('fill', item.color)
 				.appendTo( newg ) ; 
-
+				
+			// if we have an icon - draw it too
 			if( 'icon' in item ) {
 				use = this.SVG("use")
 	  				.attr('width', item.size)
@@ -165,13 +169,16 @@ function PopoutMenu( args ) {
 					.appendTo( newg ) ;				    		
 	    		att = this.XLINK( 'href', item.icon ) ;
 	    		use[0].setAttributeNodeNS(att);
-			}			
+			}	
+			// if no icon we assume the colour means something o_O		
 		} // end for each item
 
 // Now add the centre icon/text into the menu
 		this.menuCentre = this.SVG('g')
 		    .attr('transform', 'translate(' + this.size + ' ' + this.size + ')' ) 
 			.appendTo( svgg ) ;
+			
+// If we're doing a popout we need to process the click = open or close function		
 		if( this.popoutMenu ) { 		 
     		this.menuCentre.click( this, function(evt) {
    				menu = evt.data ; 
@@ -199,7 +206,6 @@ function PopoutMenu( args ) {
 		}		
 	}
 	
-	this.menuIsOpen = false ;
 	
 	/******************************************************************************************
 	This is used to open/close the menu - when clicked
@@ -275,6 +281,9 @@ function PopoutMenu( args ) {
 	******************************************************************************************/
 	this.setSelectedItem = function( item ) {
 		this.selectedItem = item ;
+		// if we are making a radio button - i.e. choose one of some options ...
+		// .. set the centre icon to be the selected item
+		// If we 'reclick' the selected item we'll disable all selections
 		if( this.radioMenu ) {
 			circle = this.menuCentre.children( 'circle' ) ;
 			
@@ -317,4 +326,11 @@ function PopoutMenu( args ) {
 			self.toggleMenuOpenCloseState() ;
 		}
 	}
+}
+
+/**
+This is called @ end of SVG animation to hide all icons (clue's in the name)
+*/
+function hideIcons(id) {
+	$("[name='"+id+"']").attr("display", "none");
 }
