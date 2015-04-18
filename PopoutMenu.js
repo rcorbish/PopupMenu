@@ -1,5 +1,4 @@
 
-
 /*****************************************************************************************************************
 
   	PopoutMenu
@@ -29,16 +28,16 @@
 	
 ******************************************************************************************************************/
 function PopoutMenu( args ) {
-	var self = this ;				// needed inside some web callbacks
-	this.menuIsOpen = false ;		// assume menu is in close state at first
+	var self = this ;				/* needed inside some web callbacks */
+	this.menuIsOpen = false ;		/* assume menu is in close state at first */
 	
-    Object.keys(args).forEach( 		// Copy the input object to local vars ( same names ) 
+    Object.keys(args).forEach( 		/* Copy the input object to local vars ( same names ) */ 
     	function(i) { 
     		self[i] = args[i] ; 
     	} 
     )
     
-	// Set some defaults if not set by the input argument
+	/* Set some defaults if not set by the input argument */
 	if( !this.id )  		this.id 			= 'ArcMenu' ;
 	if( !this.size )    	this.size 			= 80  ;
 	if( !this.openTime )  	this.openTime		= 100  ;
@@ -49,27 +48,27 @@ function PopoutMenu( args ) {
 	if( !this.radioMenu ) 	this.radioMenu		= true ;
 	if( !this.popoutMenu ) 	this.popoutMenu		= true ;
 
-	this.selectedItem = undefined ;	// no menu is selected - should this be a parameter/index ?????
+	this.selectedItem = undefined ;	/* no menu is selected - should this be a parameter/index ????? */
 
 	/*
 	We want to draw the circular menu as if they were on a clock face
 	the first menu item is drawn at startOClock and the last at endOClock
 	*/
 	while( this.startOClock >= 12 ) this.startOClock -= 12 ;
-	while( this.endOClock > 12 ) this.endOClock -= 12 ;  // NB can end @12 not 0 !!!!!!
+	while( this.endOClock > 12 ) this.endOClock -= 12 ;  /* NB can end @12 not 0 !!!!!! */
 
-	this.arcLength  = (this.endOClock-this.startOClock) * Math.PI / 6.0; // arc span in radians (12:00 - 06:00 = 180deg = PI radians)	
+	this.arcLength  = (this.endOClock-this.startOClock) * Math.PI / 6.0; /* arc span in radians (12:00 - 06:00 = 180deg = PI radians) */	
 
-	this.startAngle = this.startOClock * Math.PI / 15.0;	// radians per hour on a clock (360 / 12) = 30 == 2.Pi rads
-	this.startAngle -= Math.PI / 2;	// rotate clock face so 12:00 is UP
+	this.startAngle = this.startOClock * Math.PI / 15.0;	/* radians per hour on a clock (360 / 12) = 30 == 2.Pi rads */
+	this.startAngle -= Math.PI / 2;	/* rotate clock face so 12:00 is UP */
 	
-	this.items = [] ;					// no items in the list @ init
+	this.items = [] ;					/* no items in the list @ init */
 	
 	/**
 		Define an internal private object type to hold menu items
 	*/
 	function Item( args ) {	
-		// Usual pattern - pass in an object containing all named args
+		/*  Usual pattern - pass in an object containing all named args */
 		var self = this ;
 	    Object.keys(args).forEach( 
 	    	function(i){ 
@@ -82,7 +81,7 @@ function PopoutMenu( args ) {
 	If we need to create elements outside of the default namespace. jQuery doesn't support namespaces
 	******************************************************************************************/
 	this.SVG = function(tag){ 
-	// Need to create a new doc, by default the docs are XHTML (lowercase only) compliant
+	/* Need to create a new doc, by default the docs are XHTML (lowercase only) compliant */
 		doc = document.implementation.createDocument(null, null, null); 
 		return $(doc.createElementNS('http://www.w3.org/2000/svg', tag)); 
 	}
@@ -106,25 +105,28 @@ function PopoutMenu( args ) {
 		svgg = $("#g_"+this.id ) ;
 
 		angle = this.startAngle ;
-		for( item of this.items ) {		// for each item added by addItem ...			
+		for( item of this.items ) {		/* for each item added by addItem ... */			
 			item.cx = (this.size - item.size) * Math.cos( angle ) + this.size ;
 			item.cy = (this.size - item.size) * Math.sin( angle ) + this.size ;
 			angle += this.arcLength / (this.items.length - 1) ;
 
 			newg = this.SVG('g')
-			    .attr('name', this.id  ) 				// all 'animatable' elements have this name
-			    .attr('transform', 'translate(' + (this.size-this.itemSize/2) + ' ' + (this.size-this.itemSize/2) + ')' ) 
-				.data( item )							// attach the item to the svg
+			    .attr('name', this.id  ) 				/*  all 'animatable' elements have this name */
+			    .attr('transform', 'translate(' + (this.size-this.itemSize/2) + ' ' + (this.size-this.itemSize/2) + ')' )  
+				.data( item )							/* attach the item to the svg */
 				.appendTo( svgg ) 
 			  	.click( item, function(evt){
-			  		self.changeSelection( evt.data ) ;	// read the item from event data
-			  		return false ;						// finished processing the event
+			  		self.changeSelection( evt.data ) ;	/* read the item from event data */
+			  		return false ;						/* finished processing the event */
 				} ) ;				
+			
 				    		
-			// if we're doing a popout ( and not an always open menu ...
-			// ... we need to add in the animations
+			/*
+			 if we're doing a popout ( and not an always open menu ...
+			 ... we need to add in the animations
+			*/
 			if( this.popoutMenu ) {
-			    newg.attr('display', 'none'  ) 			// in popupMode menu items are hidden, until opened
+			    newg.attr('display', 'none'  ) ;		/* in popupMode menu items are hidden, until opened */
 			    
 				animation = this.SVG( "animateTransform" )
 		            .attr( 'type', 'translate' )
@@ -136,7 +138,7 @@ function PopoutMenu( args ) {
 		            
 				animation.data( 'direction', 'open' ) ;		
 		    	animation[0].setAttribute( 'attributeName', 'transform' ) ;
-	            animation.appendTo( newg )
+	            animation.appendTo( newg ) ;
 	             
 				animation = this.SVG( "animateTransform" )
 		            .attr( 'type', 'translate' )
@@ -149,9 +151,9 @@ function PopoutMenu( args ) {
 	            
 				animation.data( 'direction', 'close' ) ;		
 		    	animation[0].setAttribute( 'attributeName', 'transform' ) ;
-	            animation.appendTo( newg ) 
+	            animation.appendTo( newg ) ;
 			}
-			// Draw each menu item circle with the proper size and colour
+			/* Draw each menu item circle with the proper size and colour */
 			circle = this.SVG('circle')
 				.attr('cx', 0)
 			    .attr('cy', 0)
@@ -159,7 +161,7 @@ function PopoutMenu( args ) {
 			    .attr('fill', item.color)
 				.appendTo( newg ) ; 
 				
-			// if we have an icon - draw it too
+			/* if we have an icon - draw it too */
 			if( 'icon' in item ) {
 				use = this.SVG("use")
 	  				.attr('width', item.size)
@@ -170,15 +172,15 @@ function PopoutMenu( args ) {
 	    		att = this.XLINK( 'href', item.icon ) ;
 	    		use[0].setAttributeNodeNS(att);
 			}	
-			// if no icon we assume the colour means something o_O		
-		} // end for each item
+			/* if no icon we assume the colour means something o_O */		
+		} /* end for each item */
 
-// Now add the centre icon/text into the menu
+/* Now add the centre icon/text into the menu */
 		this.menuCentre = this.SVG('g')
 		    .attr('transform', 'translate(' + this.size + ' ' + this.size + ')' ) 
 			.appendTo( svgg ) ;
 			
-// If we're doing a popout we need to process the click = open or close function		
+/* If we're doing a popout we need to process the click = open or close function */		
 		if( this.popoutMenu ) { 		 
     		this.menuCentre.click( this, function(evt) {
    				menu = evt.data ; 
@@ -200,11 +202,10 @@ function PopoutMenu( args ) {
   				.attr('x', -this.itemSize/2)
 			    .attr('y', -this.itemSize/2)
     			.appendTo( this.menuCentre ) ;
-    			
     		att = this.XLINK( 'href', this.icon ) ;
     		use[0].setAttributeNodeNS(att);
 		}		
-	}
+	} ;
 	
 	
 	/******************************************************************************************
@@ -218,24 +219,24 @@ function PopoutMenu( args ) {
     		this.openMenu() ;
     		this.menuIsOpen = true ;
     	}
-    }
+    } ;
     
 	/******************************************************************************************
 	 Close the menu - this will pop the icons into the centre
 	*/
     this.closeMenu = function() {
-     	animations = $("[name='"+this.id+"'] > [begin='indefinite']" ).filter( function() { return $(this).data('direction')=='close'; } )
+     	animations = $("[name='"+this.id+"'] > [begin='indefinite']" ).filter( function() { return $(this).data('direction')=='close'; } );
     	animations.each( function( animation ) {
   			this.beginElement();
 		});
-    }
+    } ;
 
 	/******************************************************************************************
 	 After the menu animation (closing) is finished we hide all the icons
 	*/
     this.hideIcons = function() {
 		$("[name='"+this.id+"']").attr("display", "none");
-	}
+	} ;
 
 	/******************************************************************************************
 	 Open the menu - this will pop the icons out from the centre
@@ -243,11 +244,11 @@ function PopoutMenu( args ) {
     this.openMenu = function() {
     	$("[name='"+this.id+"']").removeAttr("display") ;
     	
-     	animations = $("[name='"+this.id+"'] > [begin='indefinite']" ).filter( function() { return $(this).data('direction')=='open'; } )
+     	animations = $("[name='"+this.id+"'] > [begin='indefinite']" ).filter( function() { return $(this).data('direction')=='open'; } ) ;
     	animations.each( function( animation ) {
   			this.beginElement();
 		});
-    }
+    } ;
     
 	/******************************************************************************************
 	A publicly called function to add a new menu item. 
@@ -267,7 +268,7 @@ function PopoutMenu( args ) {
 		if( !args.color ) args.color = this.color ;
 		
 		this.items.push( new Item( args ) ) ;
-	}
+	} ;
 	
 
 	/******************************************************************************************
@@ -281,9 +282,10 @@ function PopoutMenu( args ) {
 	******************************************************************************************/
 	this.setSelectedItem = function( item ) {
 		this.selectedItem = item ;
-		// if we are making a radio button - i.e. choose one of some options ...
-		// .. set the centre icon to be the selected item
-		// If we 'reclick' the selected item we'll disable all selections
+		/* if we are making a radio button - i.e. choose one of some options ...
+		 .. set the centre icon to be the selected item
+		 If we 'reclick' the selected item we'll disable all selections
+		 */
 		if( this.radioMenu ) {
 			circle = this.menuCentre.children( 'circle' ) ;
 			
@@ -293,7 +295,7 @@ function PopoutMenu( args ) {
 	   		att = this.XLINK( 'href', item ? item.icon : this.icon ) ;
 	   		use[0].setAttributeNodeNS(att);
 	   	}
-   	}
+   	} ;
 	
 
 	
@@ -325,8 +327,8 @@ function PopoutMenu( args ) {
 		if( this.popoutMenu ) {
 			self.toggleMenuOpenCloseState() ;
 		}
-	}
-}
+	} ;
+} ;
 
 /**
 This is called @ end of SVG animation to hide all icons (clue's in the name)
